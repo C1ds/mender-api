@@ -105,7 +105,7 @@ def menu(jwt):
             if not device_inventory:
                 print ("Error al obtener los inventarios")
             else:
-                print(device_mac)
+                print(device_inventory)
         
         if option == "3":
             return
