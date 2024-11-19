@@ -67,9 +67,9 @@ def get_list_devices(jwt):
     devices = get_request(url, headers)
     return devices
 
-def get_device_inventory(jwt, device_mac):
+def get_device_inventory(jwt, device_id):
     BASE_URL="https://hosted.mender.io/api/management/v2/devauth"
-    API_ENDPOINT=f"/devices/{device_mac}"
+    API_ENDPOINT=f"/devices/{device_id}"
     url=BASE_URL+API_ENDPOINT
 
     headers = {
@@ -80,57 +80,81 @@ def get_device_inventory(jwt, device_mac):
     device_inventory = get_request(url, headers)
     return device_inventory
 
+def get_jwt(user, password):
+    # Autenticación del usuario
+    jwt_temp = authenticate_user(user, password)
+    if not jwt_temp:
+        print ("Error al autenticar el usuario")
+        return 0
+                
+    # Creación de token
+    jwt = create_token(jwt_temp)
+    if not jwt:
+        print ("Error al crear el token")
+        return 0
+    
+    print("Sesión Creada")
+    return jwt
+
 def menu(jwt):
-    print("Mender Menu\nOption: ")
     option = ""
 
     while option != "3":
+        print("---Mender Menu---")
         print("[1] Get list devices")
         print("[2] Get device inventory")
         print("[3] Exit")
 
-        option = input()
+        option = input("Opción: ")
 
         if option == "1":
             devices = get_list_devices(jwt)
             if not devices:
                 print ("Error al obtener los dispositivos")
             else:
-                print(devices)
+                devices = json.loads(devices)
+                print(json.dumps(devices, indent=4))
 
         if option == "2":
-            print("Device mac: ")
-            device_mac = input()
-            device_inventory = get_device_inventory(jwt, device_mac)
+            device_id = input("Device id: ")
+            device_inventory = get_device_inventory(jwt, device_id)
             if not device_inventory:
                 print ("Error al obtener los inventarios")
             else:
-                print(device_inventory)
+                device_inventory = json.loads(device_inventory)
+                print(json.dumps(device_inventory, indent=4))
         
         if option == "3":
+            with open('jwt.txt', 'w') as archivo:
+                archivo.write(jwt)
             return
 
 
 def main(user, password):
-    # Paso 1: Autenticación del usuario
-    jwt_temp = authenticate_user(user, password)
-    if not jwt_temp:
-        print ("Error al autenticar el usuario")
-        return
-     
-    # Paso 2: Creación de token
-    jwt = create_token(jwt_temp)
-    if not jwt:
-        print ("Error al crear el token")
-        return
-     
-    # Paso 3: Opciones
-    menu(jwt)
+    try:
+        with open('jwt.txt', 'r') as archivo:
+            if (archivo.read(1) == ''):
+                jwt = get_jwt(user, password)
+
+                if jwt == 0: return
+            
+            else:
+                archivo.seek(0)
+                jwt = archivo.read()
+                print("Sesión Cargada")
+        # Opciones
+        menu(jwt)
+    
+    except FileNotFoundError:
+        with open('jwt.txt', 'w') as archivo:
+            jwt = get_jwt(user, password)
+            archivo.write(jwt)
+        menu(jwt)
+
 
 if __name__ == "__main__":
     user="your@email.com"
     password="yourStrongPass"
+    
+    #jwt - 2 horas
     main(user, password)
-
-
-
